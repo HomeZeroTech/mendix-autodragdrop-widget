@@ -62,7 +62,9 @@ Industry: (none specific). Category: User Interface.
 
 ## Media & Documentation
 
-Cover image (600x240) and screenshots (16:9): in `docs/media/`, taken from the demo app.
+In `docs/media/`, taken from the demo app: the cover image `cover-600x240.png`, six screenshots of 1600x900
+(`01-overview.png` to `06-board-dragging.png`) and a recording `demo.webm` (upload it to YouTube if you want to fill
+the YouTube Video field).
 
 **Documentation**
 
@@ -125,4 +127,4 @@ Cover image (600x240) and screenshots (16:9): in `docs/media/`, taken from the d
 
 - GitHub: https://github.com/HomeZeroTech/mendix-dragdrop-widget
 - Issues: https://github.com/HomeZeroTech/mendix-dragdrop-widget/issues
-- Demo app: (add the Free App's URL once it is deployed)
+- Demo app: https://autodraganddrop-sandbox.mxapps.io/

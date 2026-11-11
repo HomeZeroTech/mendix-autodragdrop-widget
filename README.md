@@ -8,10 +8,14 @@ showing its own data, so it looks exactly as before.
 It works with mouse, touch and keyboard, in vertical lists, horizontal lists, wrapping grids, grouped lists and
 boards with lanes. It has no dependencies besides Mendix itself.
 
+- Live demo: https://autodraganddrop-sandbox.mxapps.io/ (no login needed; a free app, so the first visit can take a
+  while to wake it up).
 - Mendix Studio Pro 11.12 or later, web (React client).
 - Licence: Apache 2.0.
 - Questions and bugs: [GitHub issues](https://github.com/HomeZeroTech/mendix-dragdrop-widget/issues). Support is
   best effort.
+
+![A card being dragged to an empty lane, next to a grouped list](docs/media/06-board-dragging.png)
 
 ## Use it in a list
 
