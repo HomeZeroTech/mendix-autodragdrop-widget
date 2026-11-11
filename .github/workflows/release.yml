@@ -1,0 +1,36 @@
+name: Release
+
+# Pushing a tag v<version> builds the widget and attaches the .mpk to a GitHub release.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check that the tag matches the widget version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version" >&2
+            exit 1
+          fi
+          grep -q "version=\"$version\"" src/package.xml || { echo "src/package.xml is not at $version" >&2; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npm run release
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "dist/$VERSION/homezero.DragDrop.mpk" --title "$GITHUB_REF_NAME" --generate-notes

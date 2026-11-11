@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget id="homezero.dragdrop.DragDrop" pluginWidget="true" needsEntityContext="true" offlineCapable="true"
+        supportedPlatform="Web"
+        xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+    <name>Drag &amp; drop</name>
+    <description>Adds drag-and-drop to a list that already exists. Place it in a row: it draws a six-dot grip and makes that row draggable. The list keeps loading and showing its own data.</description>
+    <icon/>
+    <properties>
+        <propertyGroup caption="General">
+            <propertyGroup caption="Role">
+                <property key="role" type="enumeration" defaultValue="handle">
+                    <caption>Role</caption>
+                    <description>Handle: place it in a row (a gallery item, list view item or data grid row) to make that row draggable; it draws the six dots there. Drop zone: only needed when rows move between lists (lanes, groups) or into an empty list.</description>
+                    <enumerationValues>
+                        <enumerationValue key="handle">Handle (makes its row draggable)</enumerationValue>
+                        <enumerationValue key="zone">Drop zone</enumerationValue>
+                    </enumerationValues>
+                </property>
+                <property key="group" type="string" required="true" defaultValue="default">
+                    <caption>Group</caption>
+                    <description>Rows can only be dropped among rows and in drop zones with the same group name. Give nested lists (for example packages and the lines inside them) different names.</description>
+                </property>
+                <property key="disabled" type="expression" required="false">
+                    <caption>Disabled</caption>
+                    <description>Optional. When true, this row cannot be dragged / this drop zone accepts no drops.</description>
+                    <returnType type="Boolean"/>
+                </property>
+            </propertyGroup>
+            <propertyGroup caption="Row">
+                <property key="dragBy" type="enumeration" defaultValue="row">
+                    <caption>Drag by</caption>
+                    <description>Whole row: the row can be picked up anywhere; buttons, links and inputs in it keep working. On touch a short press picks it up, so a swipe still scrolls. Six dots only: dragging starts on the dots only, so text in the row stays selectable.</description>
+                    <enumerationValues>
+                        <enumerationValue key="row">Whole row</enumerationValue>
+                        <enumerationValue key="handle">Six dots only</enumerationValue>
+                    </enumerationValues>
+                </property>
+                <property key="showHandle" type="boolean" defaultValue="true">
+                    <caption>Show six dots</caption>
+                    <description>Draw the six-dot grip where this widget is placed, as a sign that the row can be dragged. On touch a press on the dots picks the row up at once.</description>
+                </property>
+                <property key="sortValue" type="expression" required="false">
+                    <caption>Sort value</caption>
+                    <description>Optional. Current sort value of this row (e.g. $currentObject/Sequence). When set, On drop receives a new sort value between the neighbours at the drop position (newSortValue).</description>
+                    <returnType type="Decimal"/>
+                </property>
+                <property key="itemKey" type="expression" required="false">
+                    <caption>Item key</caption>
+                    <description>Optional. Unique key of this row (e.g. toString($currentObject/StatusID)). Needed when rows move between drop zones, and passed to On drop as the key of the neighbours.</description>
+                    <returnType type="String"/>
+                </property>
+                <property key="rowSelector" type="string" required="false">
+                    <caption>Row (CSS selector)</caption>
+                    <description>Optional. The element that moves: the closest ancestor matching this selector. Leave empty for the gallery item, list view item or data grid row this widget sits in.</description>
+                </property>
+                <property key="handleLabel" type="textTemplate" required="false">
+                    <caption>Handle label</caption>
+                    <description>Optional. Text for screen readers and the tooltip of the six dots. Leave empty for the built-in text in the user's language (Dutch, German or English).</description>
+                </property>
+            </propertyGroup>
+            <propertyGroup caption="Drop zone">
+                <property key="zoneKey" type="expression" required="false">
+                    <caption>Zone key</caption>
+                    <description>Key of this drop zone (e.g. toString($currentObject/StatusID)), passed to the On drop actions as the zone a row came from or went to.</description>
+                    <returnType type="String"/>
+                </property>
+                <property key="zoneTarget" type="enumeration" defaultValue="selector">
+                    <caption>Drop zone is</caption>
+                    <description>What forms the drop zone. An element around this widget: place the widget anywhere inside the lane or group and name that element with a CSS selector. The content of this widget: place the list inside the widget; the widget draws a box around it and that box is the drop zone.</description>
+                    <enumerationValues>
+                        <enumerationValue key="selector">An element around this widget</enumerationValue>
+                        <enumerationValue key="content">The content of this widget</enumerationValue>
+                    </enumerationValues>
+                </property>
+                <property key="targetSelector" type="string" required="false">
+                    <caption>Element (CSS selector)</caption>
+                    <description>The drop zone is the closest element around this widget that matches this selector, e.g. .kbn-lane.</description>
+                </property>
+                <property key="content" type="widgets" required="false">
+                    <caption>Content</caption>
+                    <description>The list that forms the drop zone.</description>
+                </property>
+            </propertyGroup>
+            <propertyGroup caption="Animation">
+                <property key="animateChanges" type="boolean" defaultValue="true">
+                    <caption>Animate list changes</caption>
+                    <description>Slide the rows of this list to their new place whenever the list changes (a row is added, removed or moved), not only after a drag. The two settings below also set the speed of the drag itself, so they stay in use when this is off.</description>
+                </property>
+                <property key="duration" type="integer" defaultValue="200">
+                    <caption>Duration</caption>
+                    <description>How long a row takes to move to another place, in milliseconds: when it makes room during a drag, settles after a drop, or the list changes. A new row takes a little longer to come in. 0 = no animation. (AutoAnimate's default is 250.)</description>
+                </property>
+                <property key="animationFlow" type="enumeration" defaultValue="easeOut">
+                    <caption>Animation flow</caption>
+                    <description>How rows speed up and slow down while they move. (AutoAnimate's default is Ease in-out.)</description>
+                    <enumerationValues>
+                        <enumerationValue key="easeInOut">Ease in-out (slow start and slow end)</enumerationValue>
+                        <enumerationValue key="easeIn">Ease in (slow start)</enumerationValue>
+                        <enumerationValue key="easeOut">Ease out (slow end)</enumerationValue>
+                        <enumerationValue key="linear">Linear (same speed from start to end)</enumerationValue>
+                    </enumerationValues>
+                </property>
+            </propertyGroup>
+        </propertyGroup>
+        <propertyGroup caption="Events">
+            <propertyGroup caption="Row">
+                <property key="onDrop" type="action" required="false">
+                    <caption>On drop</caption>
+                    <description>Handle only. Runs when this row is dropped at a new place, with this row's object as context.</description>
+                    <actionVariables>
+                        <actionVariable key="newIndex" type="Integer" caption="0-based position among the rows shown in the target list, without the dragged row"/>
+                        <actionVariable key="newSortValue" type="Decimal" caption="Sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 in an empty list (needs Sort value on the rows)"/>
+                        <actionVariable key="toZoneKey" type="String" caption="Zone key of the drop zone the row was dropped in (empty without drop zones)"/>
+                        <actionVariable key="fromZoneKey" type="String" caption="Zone key of the drop zone the row came from (empty without drop zones)"/>
+                        <actionVariable key="afterKey" type="String" caption="Item key of the row it was dropped after (empty = at the start)"/>
+                        <actionVariable key="beforeKey" type="String" caption="Item key of the row it was dropped before (empty = at the end)"/>
+                    </actionVariables>
+                </property>
+            </propertyGroup>
+            <propertyGroup caption="Drop zone">
+                <property key="onZoneDrop" type="action" required="false">
+                    <caption>On drop in zone</caption>
+                    <description>Drop zone only. Runs when a row is dropped in this zone, with this zone's object as context.</description>
+                    <actionVariables>
+                        <actionVariable key="draggedKey" type="String" caption="Item key of the dragged row"/>
+                        <actionVariable key="fromZoneKey" type="String" caption="Zone key the row was dragged from (empty when it was not in a zone)"/>
+                        <actionVariable key="afterKey" type="String" caption="Item key of the row it was dropped after (empty = at the start)"/>
+                        <actionVariable key="beforeKey" type="String" caption="Item key of the row it was dropped before (empty = at the end)"/>
+                        <actionVariable key="newIndex" type="Integer" caption="0-based position in this zone among the rows shown, without the dragged row"/>
+                        <actionVariable key="newSortValue" type="Decimal" caption="Sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 when the zone is empty (needs Sort value on the rows)"/>
+                    </actionVariables>
+                </property>
+            </propertyGroup>
+        </propertyGroup>
+    </properties>
+</widget>

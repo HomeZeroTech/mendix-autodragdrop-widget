@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>DragDrop engine harness</title>
+        <link rel="stylesheet" href="../src/ui/DragDrop.css" />
+        <style>
+            /* Stand-ins for the Mendix and Atlas styles the widget meets in the app. */
+            :root {
+                --gray-50: #f9fafb;
+                --gray-100: #f2f4f7;
+                --gray-200: #eaecf0;
+                --gray-500: #667085;
+                --gray-900: #101828;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 16px 16px 200px;
+                font: 14px/1.4 "Inter", system-ui, sans-serif;
+                color: var(--gray-900);
+                background: #fff;
+            }
+            h2 {
+                margin: 28px 0 8px;
+                font-size: 16px;
+            }
+            .toolbar {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: center;
+                padding: 8px 12px;
+                border: 1px solid var(--gray-200);
+                border-radius: 8px;
+                background: var(--gray-50);
+            }
+            .card {
+                max-width: 560px;
+                padding: 16px;
+                border: 1px solid var(--gray-200);
+                border-radius: 12px;
+            }
+            button {
+                font: inherit;
+                cursor: pointer;
+            }
+
+            /* Gallery, "Bordered cards" */
+            .widget-gallery-items {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .widget-gallery-item {
+                padding: 8px 12px;
+                border: 1px solid var(--gray-200);
+                border-radius: 8px;
+            }
+            .row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .row .fill {
+                flex: 1;
+            }
+            .dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+            }
+            .muted {
+                color: var(--gray-500);
+                font-size: 12px;
+            }
+
+            /* Horizontal tabs */
+            .tabs .widget-gallery-items {
+                display: flex;
+                gap: 8px;
+            }
+            .tabs .widget-gallery-item {
+                padding: 0;
+                border: 0;
+            }
+            /* As Mendix renders it: the gallery item is a see-through holder, the pill is a container in it. */
+            .tabs .widget-gallery-item > .pill {
+                padding: 6px 14px;
+                border-radius: 999px;
+                background: var(--gray-100);
+                white-space: nowrap;
+            }
+
+            /* Wrapping tiles */
+            .tiles .widget-gallery-items {
+                grid-template-columns: repeat(4, 1fr);
+                max-width: 480px;
+            }
+            .tiles .widget-gallery-item {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 72px;
+                font-weight: 600;
+                background: var(--gray-50);
+            }
+
+            /* Packages with lines */
+            .packages > .widget-gallery-items {
+                max-width: 560px;
+            }
+            .package {
+                padding: 8px;
+                background: var(--gray-50);
+            }
+            .package .lines {
+                margin-top: 8px;
+                min-height: 12px;
+            }
+            .package .lines .widget-gallery-item {
+                background: #fff;
+            }
+
+            /* Board */
+            .board {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+                max-width: 760px;
+                padding-bottom: 8px;
+                overflow-x: auto;
+            }
+            .lane {
+                flex: 0 0 220px;
+                padding: 4px;
+                border: 1px solid var(--gray-100);
+                border-radius: 12px;
+                background: var(--gray-50);
+            }
+            .lane[data-dragdrop-over] {
+                border-color: #84caff;
+            }
+            .lane-header {
+                padding: 4px 8px;
+                font-weight: 600;
+            }
+            .lane-cards {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            .lane-cards .widget-gallery-items {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                min-height: 24px;
+            }
+            .lane-cards .widget-gallery-item {
+                padding: 0;
+                border: 0;
+            }
+            .kbn-card {
+                padding: 10px;
+                border: 1px solid var(--gray-100);
+                border-radius: 10px;
+                background: #fff;
+                box-shadow: 0 2px 6px rgba(5, 36, 97, 0.05);
+            }
+
+            /* Data grid 2: rows and their wrappers have no box of their own */
+            .widget-datagrid-grid.table {
+                display: grid;
+                grid-template-columns: 40px 2fr 1fr 80px;
+                max-width: 560px;
+                border: 1px solid var(--gray-200);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .widget-datagrid-grid-head,
+            .widget-datagrid-grid-body,
+            .widget-datagrid .tr {
+                display: contents;
+            }
+            .widget-datagrid .th,
+            .widget-datagrid .td {
+                display: flex;
+                align-items: center;
+                padding: 8px 12px;
+                border-bottom: 1px solid var(--gray-200);
+                background: #fff;
+            }
+            .widget-datagrid .th {
+                font-weight: 600;
+                background: var(--gray-50);
+            }
+            #log {
+                position: fixed;
+                right: 12px;
+                bottom: 12px;
+                width: 420px;
+                max-height: 180px;
+                margin: 0;
+                padding: 8px;
+                overflow: auto;
+                border-radius: 8px;
+                font: 11px/1.4 ui-monospace, monospace;
+                color: #d0d5dd;
+                background: #101828;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="toolbar">
+            <strong>DragDrop engine harness</strong>
+            <label>Server delay <input id="delay" type="number" value="350" min="0" step="50" style="width: 70px" /> ms</label>
+            <label><input id="refuse" type="checkbox" /> Server refuses the move</label>
+            <label><input id="silent" type="checkbox" /> No refresh after the action</label>
+            <label><input id="late" type="checkbox" /> Widget renders after its row</label>
+            <label>Duration <input id="duration" type="number" value="200" min="0" step="50" style="width: 70px" /> ms</label>
+            <label
+                >Animation flow
+                <select id="flow">
+                    <option value="easeInOut">Ease in-out</option>
+                    <option value="easeIn">Ease in</option>
+                    <option value="easeOut" selected>Ease out</option>
+                    <option value="linear">Linear</option>
+                </select>
+            </label>
+        </div>
+
+        <h2>1. Status list (vertical, whole row with six dots)</h2>
+        <div class="card" id="status">
+            <p>
+                <button id="status-add">+ Status</button>
+                <button id="status-insert">+ Status as 2nd</button>
+                <button id="status-remove">Remove last</button>
+                <button id="status-remove-second">Remove 2nd</button>
+                <button id="status-shuffle">Reorder from elsewhere</button>
+                <button id="status-reset">Load anew</button>
+            </p>
+            <div class="widget-gallery"><div class="widget-gallery-items" id="status-list"></div></div>
+        </div>
+
+        <h2>2. Tabs (horizontal, whole row; a click on a tab is counted)</h2>
+        <div class="tabs">
+            <div class="widget-gallery"><div class="widget-gallery-items" id="tab-list"></div></div>
+            <p class="muted">Clicks: <span id="tab-clicks">0</span></p>
+        </div>
+
+        <h2>3. Tiles (wrapping grid, whole row)</h2>
+        <div class="tiles">
+            <div class="widget-gallery"><div class="widget-gallery-items" id="tile-list"></div></div>
+        </div>
+
+        <h2>4. Packages with lines (a package moves by its dots only, lines by the whole row, within and between packages)</h2>
+        <div class="packages">
+            <div class="widget-gallery"><div class="widget-gallery-items" id="package-list"></div></div>
+        </div>
+
+        <h2>5. Board (drop zones per lane, whole card, an empty lane, scrolling)</h2>
+        <div class="board" id="board"></div>
+
+        <h2>6. Data grid rows (no box of their own, whole row with six dots)</h2>
+        <p>
+            <button id="grid-add">+ Question as 2nd</button>
+            <button id="grid-remove">Remove 2nd</button>
+        </p>
+        <div class="widget-datagrid">
+            <div class="widget-datagrid-grid table">
+                <div class="widget-datagrid-grid-head">
+                    <div class="tr">
+                        <div class="th"></div>
+                        <div class="th">Question</div>
+                        <div class="th">Type</div>
+                        <div class="th">Order</div>
+                    </div>
+                </div>
+                <div class="widget-datagrid-grid-body" id="grid-body"></div>
+            </div>
+        </div>
+
+        <pre id="log"></pre>
+        <script type="module" src="./harness.js"></script>
+    </body>
+</html>
