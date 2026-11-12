@@ -15,7 +15,7 @@ boards with lanes. It has no dependencies besides Mendix itself.
 - Questions and bugs: [GitHub issues](https://github.com/HomeZeroTech/mendix-dragdrop-widget/issues). Support is
   best effort.
 
-![A card being dragged to an empty lane, next to a grouped list](docs/media/06-board-dragging.png)
+![Three steps in Studio Pro: place the widget in the row, pick the sort attribute, set On drop to Save changes](docs/media/01-three-steps.png)
 
 ## Three steps
 

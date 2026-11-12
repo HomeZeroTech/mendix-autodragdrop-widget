@@ -71,8 +71,14 @@ Industry: (none specific). Category: User Interface.
 
 ## Media & Documentation
 
-In `docs/media/`, taken from the demo app: the cover image `cover-600x240.png`, the screenshots and a recording
-`demo.webm` (upload it to YouTube if you want to fill the YouTube Video field).
+In `docs/media/`, taken from the demo app and from Studio Pro:
+
+- `cover-600x240.png`: the cover image.
+- `01-three-steps.png`: how to set it up in a Gallery, in three steps. Upload this one first.
+- `02-data-grid-and-more.png`: the widget in a Data grid 2, and what the advanced settings add.
+- `03-list-dragging.png`, `04-groups-and-board.png`, `05-board-dragging.png`: the demo app, a row or card in
+  the air.
+- `demo.webm`: a recording of all demos (upload it to YouTube if you want to fill the YouTube Video field).
 
 **Documentation**
 
