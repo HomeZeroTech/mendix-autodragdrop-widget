@@ -14,7 +14,7 @@ const ZONE_ATTRIBUTE = "data-dragdrop-zone";
 
 /** Rows the widget finds when no selector is given: the list entry it sits in. */
 export const DEFAULT_ROW_SELECTOR =
-    ".widget-gallery-item, .mx-listview-item, .mx-templategrid-item, .widget-datagrid .tr[role='row'], [data-dragdrop-item]";
+    ".widget-gallery-item, .mx-listview > ul > li, .mx-listview-item, .mx-templategrid-item, .widget-datagrid .tr[role='row'], [data-dragdrop-item]";
 
 export interface ItemHandle {
     update(options: ItemOptions): void;

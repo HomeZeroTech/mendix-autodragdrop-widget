@@ -39,6 +39,8 @@ Good to know:
   users may not write the attribute but may reorder, use manual sequencing with a microflow (below).
 - **Rows with the same number, or none.** New rows often all start at 0. The first time such a list is reordered,
   the rows that are shown are numbered 1, 2, 3 and so on. With pages, that is the rows of the page you are on.
+- **List view.** Mendix gives a widget in a List view a read-only attribute unless the List view's own
+  **Editable** setting is Yes. Set that, or the dots stay greyed out. A Gallery and a Data grid 2 need nothing.
 - **On drop is what saves.** Without it nothing is stored: the row slides back, and the browser's console says so.
   Instead of Save changes you can pick a microflow or nanoflow that commits the row, for example to do something
   more after each change.
@@ -100,11 +102,11 @@ An empty list needs a drop zone around it. If the zone holds more than one list,
 | General | Row (CSS selector) | The element that moves, when it is not the list item the widget sits in |
 | General | Handle label | Screen reader text and tooltip; empty = a built-in Dutch, German or English text |
 | General | Zone key, Drop zone is, Element (CSS selector), Content | For the Drop zone role, see above |
+| Events | On drop | Automatic: Save changes. Manual: your flow |
+| Events | On drop in zone | Drop zone: action with the zone as context |
 | Animation | Animate list changes | Animate the list whenever it changes, not only after a drag (default on) |
 | Animation | Duration | How long a row takes to move to another place, in milliseconds (default 200; 0 = no animation) |
 | Animation | Animation flow | Ease in-out, Ease in, Ease out (default) or Linear |
-| Events | On drop | Automatic: Save changes. Manual: your flow |
-| Events | On drop in zone | Drop zone: action with the zone as context |
 
 Switching Show advanced settings back to No: first set the advanced settings back to what they were (Role to Handle,
 Sequencing to Automatic, the others empty). Studio Pro reports a widget that holds a value in a setting it no longer
@@ -116,7 +118,8 @@ Behaviour worth knowing:
   press on the dots picks the row up at once; elsewhere it needs a short hold, so a swipe still scrolls.
 - **Keyboard**: focus the dots, Space or Enter picks up, the arrow keys move, Space or Enter drops, Escape cancels.
   The arrows follow the list: Up and Down in a list that runs down, Left and Right in one that runs sideways, all
-  four in a wrapping grid (Up and Down by a whole line).
+  four in a wrapping grid (Up and Down by a whole line). While a row is picked up, the list around it does not
+  get those keys, so a Gallery or Data grid 2 does not move the focus away.
 - **Escape** during a mouse or touch drag puts the row back.
 - **Duration and Animation flow** also set the speed of the drag itself, so they stay in use when Animate list
   changes is off. The pair applies to everything that moves in the list: rows making room during a drag, the dropped

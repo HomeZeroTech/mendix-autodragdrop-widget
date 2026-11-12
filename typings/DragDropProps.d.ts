@@ -39,9 +39,6 @@ export interface DragDropContainerProps {
     zoneTarget: ZoneTargetEnum;
     targetSelector: string;
     content?: ReactNode;
-    animateChanges: boolean;
-    duration: number;
-    animationFlow: AnimationFlowEnum;
     onDrop?: ActionValue<{
         newIndex: Option<Big>;
         newSortValue: Option<Big>;
@@ -58,6 +55,9 @@ export interface DragDropContainerProps {
         newIndex: Option<Big>;
         newSortValue: Option<Big>;
     }>;
+    animateChanges: boolean;
+    duration: number;
+    animationFlow: AnimationFlowEnum;
 }
 
 export interface DragDropPreviewProps {
@@ -86,9 +86,9 @@ export interface DragDropPreviewProps {
     zoneTarget: ZoneTargetEnum;
     targetSelector: string;
     content: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
+    onDrop: {} | null;
+    onZoneDrop: {} | null;
     animateChanges: boolean;
     duration: number | null;
     animationFlow: AnimationFlowEnum;
-    onDrop: {} | null;
-    onZoneDrop: {} | null;
 }

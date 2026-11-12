@@ -288,7 +288,16 @@ function RowHandle(props: DragDropContainerProps): ReactElement {
             aria-label={label}
             aria-disabled={disabled || undefined}
             title={label}
-            onKeyDown={event => registration.current && registration.current.keyDown(event.nativeEvent)}
+            onKeyDown={event => {
+                if (registration.current) {
+                    registration.current.keyDown(event.nativeEvent);
+                    // A key the drag used is not also a key for the list around it: a Gallery or Data grid 2 moves
+                    // the focus to the next row on an arrow key, which would end the drag.
+                    if (event.nativeEvent.defaultPrevented) {
+                        event.stopPropagation();
+                    }
+                }
+            }}
             onBlur={() => registration.current && registration.current.focusLost()}
             onClick={event => event.stopPropagation()}
         >

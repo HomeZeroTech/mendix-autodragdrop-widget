@@ -103,28 +103,6 @@
                 </property>
             </propertyGroup>
         </propertyGroup>
-        <propertyGroup caption="Animation">
-            <propertyGroup caption="Animation">
-                <property key="animateChanges" type="boolean" defaultValue="true">
-                    <caption>Animate list changes</caption>
-                    <description>Slide the rows of this list to their new place whenever the list changes (a row is added, removed or moved), not only after a drag. The two settings below also set the speed of the drag itself, so they stay in use when this is off.</description>
-                </property>
-                <property key="duration" type="integer" defaultValue="200">
-                    <caption>Duration</caption>
-                    <description>How long a row takes to move to another place, in milliseconds: when it makes room during a drag, settles after a drop, or the list changes. A new row takes a little longer to come in. 0 = no animation.</description>
-                </property>
-                <property key="animationFlow" type="enumeration" defaultValue="easeOut">
-                    <caption>Animation flow</caption>
-                    <description>How rows speed up and slow down while they move.</description>
-                    <enumerationValues>
-                        <enumerationValue key="easeInOut">Ease in-out (slow start and slow end)</enumerationValue>
-                        <enumerationValue key="easeIn">Ease in (slow start)</enumerationValue>
-                        <enumerationValue key="easeOut">Ease out (slow end)</enumerationValue>
-                        <enumerationValue key="linear">Linear (same speed from start to end)</enumerationValue>
-                    </enumerationValues>
-                </property>
-            </propertyGroup>
-        </propertyGroup>
         <propertyGroup caption="Events">
             <propertyGroup caption="Row">
                 <property key="onDrop" type="action" required="false">
@@ -152,6 +130,28 @@
                         <actionVariable key="newIndex" type="Integer" caption="0-based position in this zone among the rows shown, without the dragged row"/>
                         <actionVariable key="newSortValue" type="Decimal" caption="Sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 when the zone is empty (needs Sort attribute on the rows)"/>
                     </actionVariables>
+                </property>
+            </propertyGroup>
+        </propertyGroup>
+        <propertyGroup caption="Animation">
+            <propertyGroup caption="Animation">
+                <property key="animateChanges" type="boolean" defaultValue="true">
+                    <caption>Animate list changes</caption>
+                    <description>Slide the rows of this list to their new place whenever the list changes (a row is added, removed or moved), not only after a drag. The two settings below also set the speed of the drag itself, so they stay in use when this is off.</description>
+                </property>
+                <property key="duration" type="integer" defaultValue="200">
+                    <caption>Duration</caption>
+                    <description>How long a row takes to move to another place, in milliseconds: when it makes room during a drag, settles after a drop, or the list changes. A new row takes a little longer to come in. 0 = no animation.</description>
+                </property>
+                <property key="animationFlow" type="enumeration" defaultValue="easeOut">
+                    <caption>Animation flow</caption>
+                    <description>How rows speed up and slow down while they move.</description>
+                    <enumerationValues>
+                        <enumerationValue key="easeInOut">Ease in-out (slow start and slow end)</enumerationValue>
+                        <enumerationValue key="easeIn">Ease in (slow start)</enumerationValue>
+                        <enumerationValue key="easeOut">Ease out (slow end)</enumerationValue>
+                        <enumerationValue key="linear">Linear (same speed from start to end)</enumerationValue>
+                    </enumerationValues>
                 </property>
             </propertyGroup>
         </propertyGroup>

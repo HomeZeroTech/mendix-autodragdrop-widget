@@ -125,6 +125,9 @@ In `docs/media/`, taken from the demo app: the cover image `cover-600x240.png`, 
 > 2. Set **Sort attribute** to that attribute.
 > 3. On the Events tab, set **On drop** to **Save changes** (Close page: No).
 >
+> In a List view, also set the List view's own Editable setting to Yes. A Gallery and a Data grid 2 need
+> nothing more.
+>
 > The user's role needs write access to the sort attribute. If On drop is left empty nothing is saved: the row
 > slides back and the browser's console says why.
 >
