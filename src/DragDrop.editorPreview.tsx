@@ -4,7 +4,8 @@ import { Grip } from "./components/Grip";
 
 /** What Studio Pro shows in design mode. */
 export function preview(props: DragDropPreviewProps): ReactElement {
-    if (props.role === "zone" && props.zoneTarget === "selector") {
+    const zone = props.advanced === "yes" && props.role === "zone";
+    if (zone && props.zoneTarget === "selector") {
         // Nothing is drawn in the app; in the editor a small tag says which element is the drop zone.
         return (
             <span
@@ -22,7 +23,7 @@ export function preview(props: DragDropPreviewProps): ReactElement {
             </span>
         );
     }
-    if (props.role === "zone") {
+    if (zone) {
         const Content = props.content.renderer;
         return (
             <div className="dragdrop-zone">

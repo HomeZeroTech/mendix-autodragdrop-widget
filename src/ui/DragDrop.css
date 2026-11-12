@@ -102,3 +102,11 @@ html.dragdrop-active * {
 [data-dragdrop-over] {
     outline: var(--dragdrop-zone-over-outline, none);
 }
+
+/* The user may not change the order (no write access to the sort attribute): the dots stay as a sign, greyed out. */
+.dragdrop-handle--locked,
+.dragdrop-handle--locked:hover {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: none;
+}

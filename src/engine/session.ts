@@ -34,7 +34,8 @@ import {
     showRow,
     timingOf
 } from "./motion";
-import { DropInfo, ItemEntry, items, rowsIn, Zone, zoneFromEntry, zoneOf, zones } from "./registry";
+import { DropInfo, ItemEntry, items, rowsIn, rowsUnder, Zone, zoneFromEntry, zoneOf, zones } from "./registry";
+import { plan } from "./sequence";
 
 const HANDLE_START_PX = 3;
 const ROW_START_PX = 6;
@@ -311,13 +312,31 @@ class DragSession {
         covered.forEach(row => this.touched.add(row));
     }
 
-    /** Keyboard: move the row one place up or down its own list. */
-    step(delta: number): void {
+    /**
+     * Keyboard: an arrow key moves the row within its own list, in the direction the list runs. Up and Down in a
+     * stacked list, Left and Right in a list that runs sideways; in a wrapping list all four, Up and Down by a
+     * whole line. Arrows across the list's direction do nothing.
+     */
+    arrow(key: string): void {
         if (this.finishing) {
             return;
         }
         const model = this.model(this.sourceZone);
-        const index = Math.max(0, Math.min(model.slotCount - 1, this.targetIndex + delta));
+        const back = key === "ArrowUp" || key === "ArrowLeft";
+        const sideways = key === "ArrowLeft" || key === "ArrowRight";
+        let places = 1;
+        if (model.flow === "vertical" ? sideways : model.flow === "horizontal" ? !sideways : false) {
+            return;
+        }
+        if (model.flow === "grid" && !sideways) {
+            // A line up or down: as many places as fit next to each other.
+            const first = model.slotBox(0);
+            places = 1;
+            while (places < model.slotCount && Math.abs(model.slotBox(places).y - first.y) < 1) {
+                places += 1;
+            }
+        }
+        const index = Math.max(0, Math.min(model.slotCount - 1, this.targetIndex + (back ? -places : places)));
         this.setTarget(this.sourceZone, index);
     }
 
@@ -493,7 +512,12 @@ class DragSession {
         }
         // What the drag shifted is what the lists show from here on, until the server has answered.
         commit(this.touched);
-        const drop = new HeldDrop(this, target, slot, this.ghost, run);
+        // Automatic sequencing: the order this list gets, the dragged row at its new place.
+        const order = target.isSource && this.entry.options.assign ? others.slice() : null;
+        if (order) {
+            order.splice(this.targetIndex, 0, this.row);
+        }
+        const drop = new HeldDrop(this, target, slot, this.ghost, run, order);
         this.ghost = null;
         if (held) {
             waiting.push(drop);
@@ -553,6 +577,8 @@ class HeldDrop {
     private timer = 0;
     private frame = 0;
     private tries = 0;
+    /** Automatic sequencing: the rows whose new sort value is still being saved. */
+    saving = 0;
     private readonly sourceParent: HTMLElement | null;
     private readonly targetParent: HTMLElement | null;
 
@@ -562,7 +588,8 @@ class HeldDrop {
         private readonly target: ListModel,
         private readonly slot: Box,
         private ghost: Ghost | null,
-        private readonly run: () => boolean
+        private readonly run: () => boolean,
+        private readonly order: HTMLElement[] | null = null
     ) {
         this.sourceParent = drag.row.parentElement;
         const first = target.rows[0];
@@ -581,7 +608,7 @@ class HeldDrop {
     start(queued: boolean): void {
         window.clearTimeout(this.timer);
         this.timer = window.setTimeout(() => settleHeld(true), TIMEOUT_MS);
-        if (this.run()) {
+        if (this.order ? this.sequence(this.order) : this.run()) {
             return;
         }
         if (queued && this.tries < 10) {
@@ -595,6 +622,67 @@ class HeldDrop {
             return;
         }
         settleHeld(true);
+    }
+
+    /**
+     * Automatic sequencing: every row that gets another place is given the sort value of that place and saved.
+     * The list reloads once for every row that is saved, with an order that is only right after the last one, so
+     * until then the rows stay where they are shown (see `onListMutated`).
+     *
+     * @returns false when nothing could be changed: the rows slide back
+     */
+    private sequence(order: HTMLElement[]): boolean {
+        const parent = this.sourceParent;
+        if (!parent) {
+            return false;
+        }
+        const group = this.drag.entry.options.group;
+        const current = rowsUnder(parent).filter(row => items.get(row)?.options.group === group);
+        const changes = plan(current, order);
+        if (!changes || changes.length === 0) {
+            return false;
+        }
+        this.saving = changes.length;
+        changes.forEach(change => {
+            let reported = false;
+            const done = (): void => {
+                if (!reported) {
+                    reported = true;
+                    this.saved();
+                }
+            };
+            const assign = change.entry.options.assign;
+            if (!assign || !assign(change.value, change.index, done)) {
+                done();
+            }
+        });
+        return true;
+    }
+
+    /** One row's save has finished. After the last one the list is what the server made of it. */
+    private saved(): void {
+        this.saving -= 1;
+        if (this.saving > 0 || held !== this) {
+            return;
+        }
+        const parent = this.sourceParent;
+        const list = parent ? lists.get(parent) : undefined;
+        const group = this.drag.entry.options.group;
+        const now = parent ? rowsUnder(parent).filter(row => items.get(row)?.options.group === group) : [];
+        const arrived = !!this.order && now.length === this.order.length && now.every((row, i) => row === (this.order as HTMLElement[])[i]);
+        if (!arrived || !list) {
+            // The last reload is still on its way (or a save was refused): it settles this drop, or the timer does.
+            this.hurry();
+            return;
+        }
+        if (waiting.length === 0 && !session) {
+            list.reconcile("auto", { enter: true, exits: [] });
+            this.finish("none");
+        } else {
+            list.rebase();
+            this.release();
+            startNext();
+        }
     }
 
     /** True when `el` is the row or the drop zone whose action this drop runs. */
@@ -643,6 +731,10 @@ class HeldDrop {
 
     /** The action finished: its refresh follows within moments, or nothing changed. */
     hurry(): void {
+        if (this.saving > 0) {
+            // Rows are still being saved; the last one to finish settles it.
+            return;
+        }
         window.clearTimeout(this.timer);
         this.timer = window.setTimeout(() => settleHeld(true), SETTLE_MS);
     }
@@ -783,6 +875,15 @@ onListMutated((list, removed) => {
             session.invalidate();
         } else {
             list.reconcile("auto", { enter: true, exits: removed.filter(row => !movedAway.has(row)) });
+        }
+        return;
+    }
+    if (pendingDrop.saving > 0 && pendingDrop.isSource(list)) {
+        // Automatic sequencing saves row by row, and the list reloads after each with an order that is not the
+        // final one yet: every row stays where it is shown until the last save.
+        list.rebase();
+        if (session) {
+            session.invalidate();
         }
         return;
     }
@@ -1080,10 +1181,8 @@ export function keyDown(entry: ItemEntry, event: KeyboardEvent): void {
         session.drop();
     } else if (event.key === "Escape") {
         session.cancel();
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-        session.step(-1);
-    } else if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-        session.step(1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "ArrowDown" || event.key === "ArrowRight") {
+        session.arrow(event.key);
     } else {
         return;
     }

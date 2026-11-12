@@ -373,6 +373,16 @@ if (what === "lists" || what === "all") {
     byKeys.splice(3, 0, byKeys.splice(1, 1)[0]);
     report("Space, arrow, arrow, Space moves a row two places", end.order.join("|") === byKeys.join("|") && end.styles === 0, end.order.join(" | "));
 
+    before = await order(STATUS);
+    await page.focus(`${STATUS}:nth-child(2) .dragdrop-handle`);
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("Space");
+    end = await settled(STATUS);
+    report("Left and Right do nothing in a list that runs down", end.order.join("|") === before.join("|") && end.styles === 0, end.order.join(" | "));
+
     // --- Between lists --------------------------------------------------------------------------------------
     const cards = lane => `#board .lane:nth-child(${lane}) .widget-gallery-item`;
     const lanes = () => page.evaluate(() => window.harness.lanes().join(" "));
@@ -443,6 +453,62 @@ if (what === "lists" || what === "all") {
     );
     left = await page.evaluate(() => window.robot.leftovers());
     report("nothing is left on the rows afterwards (lists)", left.styles === 0 && left.copies === 0 && !left.dragging, JSON.stringify(left));
+
+    // --- Automatic sequencing -------------------------------------------------------------------------------
+    // The rows swap the numbers that are there and are saved one by one; the list reloads after every save.
+    const AUTO = "#auto-list > .widget-gallery-item";
+    const saved = () => page.evaluate(() => window.harness.saved().join(" "));
+    const names = async () => (await order(AUTO)).map(text => text.replace(/Sequence.*$/, "").trim());
+    await open();
+    await animations();
+    spots = await places(AUTO);
+    await move(AUTO, spots, 0, 3);
+    end = await settled(AUTO);
+    let stored = await saved();
+    report(
+        "automatic: the rows between the old and the new place swap their numbers",
+        stored === "10:Saved 2 20:Saved 3 30:Saved 4 40:Saved 1 50:Saved 5 60:Saved 6" && end.styles === 0,
+        stored
+    );
+    seen = await animations();
+    report("automatic: no row is shown coming or going while the rows are saved", count(seen, "enter") === 0 && count(seen, "leave") === 0, seen.join(" "));
+
+    spots = await places(AUTO);
+    await move(AUTO, spots, 5, 0);
+    await page.waitForTimeout(120);
+    await move(AUTO, spots, 1, 4);
+    end = await settled(AUTO);
+    stored = await saved();
+    report(
+        "automatic: two moves right after each other",
+        stored === "10:Saved 6 20:Saved 3 30:Saved 4 40:Saved 1 50:Saved 2 60:Saved 5" && end.styles === 0,
+        stored
+    );
+
+    await page.click("#auto-same");
+    await page.waitForTimeout(600);
+    before = await names();
+    spots = await places(AUTO);
+    await move(AUTO, spots, 0, 2);
+    end = await settled(AUTO);
+    stored = await saved();
+    const repaired = [before[1], before[2], before[0], before[3], before[4], before[5]].map((name, i) => `${i + 1}:${name}`).join(" ");
+    report("automatic: rows with the same or no number are numbered 1..n once", stored === repaired && end.styles === 0, `${stored}  (expected ${repaired})`);
+
+    await page.check("#refuse");
+    before = await names();
+    const kept = await saved();
+    spots = await places(AUTO);
+    await move(AUTO, spots, 0, 3);
+    end = await settled(AUTO);
+    report(
+        "automatic: rows that cannot be saved slide back and keep their numbers",
+        (await names()).join("|") === before.join("|") && (await saved()) === kept && end.styles === 0,
+        `${(await names()).join(" | ")}; ${await saved()}`
+    );
+    await page.uncheck("#refuse");
+    left = await page.evaluate(() => window.robot.leftovers());
+    report("nothing is left on the rows afterwards (automatic)", left.styles === 0 && left.copies === 0 && !left.dragging, JSON.stringify(left));
 
     // --- Touch ----------------------------------------------------------------------------------------------
     const touchContext = await browser.newContext({ viewport: { width: 1300, height: 1000 }, hasTouch: true });

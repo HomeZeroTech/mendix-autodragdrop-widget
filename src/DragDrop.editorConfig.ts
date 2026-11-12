@@ -2,19 +2,37 @@ import { hidePropertiesIn, Properties } from "@mendix/pluggable-widgets-tools";
 import { DragDropPreviewProps } from "../typings/DragDropProps";
 
 /**
- * Shows only the properties that belong to the chosen role.
+ * Shows only the properties that belong to the chosen settings level and role.
  *
  * Keep every rule a plain `if (values.x === "literal")` with a literal list of keys. Studio Pro reports CE0463
- * ("the definition of this widget has changed") for a widget that stores a value in a hidden property, and mxcli
- * reads these rules from this file to know which properties to leave empty when it writes a widget. It only
- * recognises this simple shape (`mxcli widget describe dragdrop -p <app.mpr>` lists the rules it found).
+ * ("the definition of this widget has changed") for a widget that stores a value in a hidden property, and tools
+ * that write widgets (mxcli) read these rules from this file to know which properties to leave empty. They only
+ * recognise this simple shape.
  */
 export function getProperties(values: DragDropPreviewProps, defaultProperties: Properties): Properties {
+    // Basic: a handle with automatic sequencing. Everything else is an advanced setting.
+    if (values.advanced === "no") {
+        hidePropertiesIn(defaultProperties, values, [
+            "role",
+            "group",
+            "disabled",
+            "sequencing",
+            "itemKey",
+            "rowSelector",
+            "handleLabel",
+            "zoneKey",
+            "zoneTarget",
+            "targetSelector",
+            "content",
+            "onZoneDrop"
+        ]);
+    }
     if (values.role === "zone") {
         hidePropertiesIn(defaultProperties, values, [
+            "sortAttribute",
             "dragBy",
             "showHandle",
-            "sortValue",
+            "sequencing",
             "itemKey",
             "rowSelector",
             "handleLabel",
@@ -50,7 +68,12 @@ interface Problem {
 
 /** Shown in Studio Pro's error list. */
 export function check(values: DragDropPreviewProps): Problem[] {
-    if (values.role === "zone" && values.zoneTarget === "selector" && !values.targetSelector.trim()) {
+    if (
+        values.advanced === "yes" &&
+        values.role === "zone" &&
+        values.zoneTarget === "selector" &&
+        !values.targetSelector.trim()
+    ) {
         return [
             {
                 property: "targetSelector",

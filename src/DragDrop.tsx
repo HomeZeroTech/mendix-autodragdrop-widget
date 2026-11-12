@@ -88,16 +88,51 @@ const DEFAULT_LABELS: Record<string, string> = {
     en: "Drag to reorder"
 };
 
-/** The handle's label when none is configured, in the language of the user's session. */
-function defaultLabel(): string {
+const LOCKED_LABELS: Record<string, string> = {
+    nl: "Je hebt geen rechten om de volgorde te wijzigen",
+    de: "Sie haben keine Berechtigung, die Reihenfolge zu ändern",
+    en: "You don't have permission to change the order"
+};
+
+/** A built-in text in the language of the user's session. */
+function builtIn(labels: Record<string, string>): string {
     const session = (window as any).mx && (window as any).mx.session;
     const locale = session && session.sessionData && session.sessionData.locale;
     const code: string = (locale && locale.code) || document.documentElement.lang || "en";
-    return DEFAULT_LABELS[code.slice(0, 2).toLowerCase()] || DEFAULT_LABELS.en;
+    return labels[code.slice(0, 2).toLowerCase()] || labels.en;
 }
 
 function classes(...names: Array<string | undefined>): string {
     return names.filter(Boolean).join(" ");
+}
+
+const warned = new Set<string>();
+
+/** Tells the app's developer, once per page, why a list does not do what they expect. */
+function warnOnce(message: string): void {
+    if (!warned.has(message)) {
+        warned.add(message);
+        console.warn(`DragDrop: ${message}`);
+    }
+}
+
+const NO_ACTION =
+    "the new order is not saved. With automatic sequencing, set On drop (Events tab) to 'Save changes', or to a flow that commits the row.";
+const NO_ATTRIBUTE = "pick a Sort attribute: without it the widget has no order to change.";
+const READ_ONLY =
+    "the sort attribute is read-only for this user (access rules, or a data view that is not editable), so the rows cannot be reordered. Give the role write access to it, or use manual sequencing with a microflow.";
+
+/** How long a row's new sort value may take to show up, and its save to finish, before the drop moves on. */
+const SAVE_TIMEOUT_MS = 4000;
+
+interface PendingSave {
+    value: Big;
+    index: number;
+    done: () => void;
+    /** "set": waiting for the new value to show up; "saving": the action runs. */
+    phase: "set" | "saving";
+    seenRunning: boolean;
+    timer: number;
 }
 
 /** Handle role: sits in a row, draws the grip and makes that row draggable. */
@@ -105,20 +140,65 @@ function RowHandle(props: DragDropContainerProps): ReactElement {
     const anchor = useRef<HTMLSpanElement>(null);
     const registration = useRef<ItemHandle | null>(null);
     const owner = useRef<HTMLElement | null>(null);
+    const saving = useRef<PendingSave | null>(null);
     const latest = useRef(props);
     latest.current = props;
 
+    const advanced = props.advanced === "yes";
+    const automatic = !advanced || props.sequencing === "automatic";
+    const sort = props.sortAttribute;
     const whole = props.dragBy === "row";
     // Without the whole row as a surface the grip is the only way to drag, so it is always shown then.
     const grip = props.showHandle || !whole;
-    const disabled = props.disabled ? props.disabled.value === true : false;
-    const selector = (props.rowSelector && props.rowSelector.trim()) || DEFAULT_ROW_SELECTOR;
-    const label = props.handleLabel && props.handleLabel.value ? props.handleLabel.value : defaultLabel();
+    // Automatic sequencing writes the sort attribute, so a user who may not write it cannot reorder.
+    const locked = automatic && !!sort && sort.status === "available" && sort.readOnly;
+    const disabled = locked || (advanced && props.disabled ? props.disabled.value === true : false);
+    const selector = (advanced && props.rowSelector && props.rowSelector.trim()) || DEFAULT_ROW_SELECTOR;
+    const label = locked
+        ? builtIn(LOCKED_LABELS)
+        : advanced && props.handleLabel && props.handleLabel.value
+        ? props.handleLabel.value
+        : builtIn(DEFAULT_LABELS);
+    if (locked) {
+        warnOnce(READ_ONLY);
+    }
+
+    /** One row's save is over (done, refused or given up on): the engine can go on. */
+    const finishSave = (): void => {
+        const current = saving.current;
+        if (current) {
+            saving.current = null;
+            window.clearTimeout(current.timer);
+            current.done();
+        }
+    };
+
+    /** Automatic sequencing: this row gets another sort value, and On drop saves it. */
+    const assign = (value: string, index: number, done: () => void): boolean => {
+        const attribute = latest.current.sortAttribute;
+        const action = latest.current.onDrop;
+        if (!attribute || attribute.readOnly || !action || !action.canExecute) {
+            return false;
+        }
+        finishSave();
+        saving.current = {
+            value: new Big(value),
+            index,
+            done,
+            phase: "set",
+            seenRunning: false,
+            timer: window.setTimeout(finishSave, SAVE_TIMEOUT_MS)
+        };
+        attribute.setValue(new Big(value));
+        return true;
+    };
+
+    const canAssign = automatic && !!sort && !sort.readOnly && !!props.onDrop && props.onDrop.canExecute;
 
     const options = (): ItemOptions => ({
-        group: props.group,
-        key: props.itemKey && props.itemKey.value ? props.itemKey.value : "",
-        sortValue: props.sortValue && props.sortValue.value ? props.sortValue.value.toString() : undefined,
+        group: advanced ? props.group : "default",
+        key: advanced && props.itemKey && props.itemKey.value ? props.itemKey.value : "",
+        sortValue: sort && sort.value !== undefined ? sort.value.toString() : undefined,
         disabled,
         handle: grip ? anchor.current : null,
         whole,
@@ -126,7 +206,14 @@ function RowHandle(props: DragDropContainerProps): ReactElement {
         animate: props.animateChanges,
         duration: props.duration,
         easing: EASINGS[props.animationFlow],
-        drop: info => runRowDrop(latest.current.onDrop, info)
+        drop: automatic
+            ? () => {
+                  // Reached when the rows cannot be numbered: say why, and let the row slide back.
+                  warnOnce(latest.current.sortAttribute ? NO_ACTION : NO_ATTRIBUTE);
+                  return false;
+              }
+            : info => runRowDrop(latest.current.onDrop, info),
+        assign: canAssign ? assign : null
     });
 
     // The row is rendered by the list around this widget, so it is found in the DOM, not passed in.
@@ -152,6 +239,40 @@ function RowHandle(props: DragDropContainerProps): ReactElement {
         }
     });
 
+    // A save in two steps: the new value has to show up in this row first, then the action stores it.
+    useEffect(() => {
+        const current = saving.current;
+        if (!current) {
+            return;
+        }
+        const action = props.onDrop;
+        if (current.phase === "set") {
+            if (sort && sort.value !== undefined && sort.value.eq(current.value) && action && !action.isExecuting) {
+                if (!action.canExecute) {
+                    finishSave();
+                    return;
+                }
+                current.phase = "saving";
+                action.execute({
+                    newIndex: new Big(current.index),
+                    newSortValue: current.value,
+                    toZoneKey: undefined,
+                    fromZoneKey: undefined,
+                    afterKey: undefined,
+                    beforeKey: undefined
+                });
+            }
+            return;
+        }
+        if (action && action.isExecuting) {
+            current.seenRunning = true;
+        } else if (current.seenRunning || !action) {
+            finishSave();
+        }
+    });
+
+    useEffect(() => finishSave, []);
+
     useActionFinished(props.onDrop, owner);
 
     if (!grip) {
@@ -160,7 +281,7 @@ function RowHandle(props: DragDropContainerProps): ReactElement {
     return (
         <span
             ref={anchor}
-            className={classes("dragdrop-handle", props.class)}
+            className={classes("dragdrop-handle", locked ? "dragdrop-handle--locked" : undefined, props.class)}
             style={props.style}
             role="button"
             tabIndex={disabled ? -1 : props.tabIndex ?? 0}
@@ -241,5 +362,6 @@ function DropZone(props: DragDropContainerProps): ReactElement {
 }
 
 export function DragDrop(props: DragDropContainerProps): ReactElement {
-    return props.role === "zone" ? <DropZone {...props} /> : <RowHandle {...props} />;
+    // Without the advanced settings the widget is a handle; the drop zone is an advanced role.
+    return props.advanced === "yes" && props.role === "zone" ? <DropZone {...props} /> : <RowHandle {...props} />;
 }

@@ -554,7 +554,7 @@ function renumberQuestions() {
 }
 $("grid-add").addEventListener("click", () => {
     questionCounter += 1;
-    questions.splice(1, 0, { id: `q${questionCounter}`, name: `Vraag ${questionCounter}`, type: "Tekst", seq: 0 });
+    questions.splice(1, 0, { id: `q${questionCounter}`, name: `Question ${questionCounter}`, type: "Text", seq: 0 });
     renumberQuestions();
 });
 $("grid-remove").addEventListener("click", () => {
@@ -562,11 +562,79 @@ $("grid-remove").addEventListener("click", () => {
     renumberQuestions();
 });
 
+// --- 7. Saved list (automatic sequencing) ---------------------------------------------------------------------
+// The widget's basic settings: no drop action that numbers the rows. The engine hands each row that changes place
+// the sort value of its new place (`assign`), and every row is saved on its own: the list reloads after each save,
+// sorted by what the server has by then, which is only the final order after the last one.
+
+const AUTO_START = [10, 20, 30, 40, 50, 60];
+let autoItems = AUTO_START.map((seq, i) => ({ id: `a${i}`, name: `Saved ${i + 1}`, seq }));
+
+const autoList = new KeyedList(
+    $("auto-list"),
+    item => {
+        const node = el("div", "widget-gallery-item");
+        const row = el("div", "row");
+        row.append(grip(), el("span", "name", item.name), el("span", "muted seq"));
+        node.append(row);
+        return node;
+    },
+    (item, node) => ({
+        group: "default",
+        key: "",
+        sortValue: item.seq === null ? undefined : String(item.seq),
+        disabled: false,
+        handle: node.querySelector(".dragdrop-handle"),
+        whole: true,
+        optimistic: true,
+        animate: true,
+        drop: null,
+        assign: (value, index, done) => {
+            if (settings.refuse) {
+                return false;
+            }
+            log(`auto ${item.name} -> ${value}`);
+            // Each row is saved by its own request; they come back one after the other.
+            window.setTimeout(() => {
+                item.seq = Number(value);
+                renderAuto();
+                done();
+            }, settings.delay + index * 40);
+            return true;
+        }
+    }),
+    (item, node) => {
+        node.querySelector(".seq").textContent = `Sequence ${item.seq === null ? "-" : item.seq}`;
+    }
+);
+
+function renderAuto() {
+    // As a database source sorted by the attribute does: rows without a value first, ties in the order they came.
+    autoItems = autoItems
+        .map((item, i) => ({ item, i }))
+        .sort((a, b) => (a.item.seq === null ? -1 : a.item.seq) - (b.item.seq === null ? -1 : b.item.seq) || a.i - b.i)
+        .map(entry => entry.item);
+    autoList.render(autoItems);
+}
+
+$("auto-reset").addEventListener("click", () => {
+    autoItems.forEach((item, i) => (item.seq = AUTO_START[i % AUTO_START.length]));
+    renderAuto();
+});
+$("auto-same").addEventListener("click", () => {
+    // New rows often all start with the same number, or none.
+    autoItems.forEach((item, i) => (item.seq = i < 2 ? null : 0));
+    autoList.render(autoItems);
+});
+renderAuto();
+
 // For checks from the browser's console or an automated driver.
 window.harness = {
     /** The animations started since the last call, as "kind:row" (a slide with the distance it comes from). */
     animations: () => animations.splice(0).map(entry => `${entry.kind}:${entry.row}${entry.from}`),
     order: id => Array.from($(id).children).map(node => node.textContent.trim().slice(0, 40)),
     statuses: () => statuses.map(status => `${status.seq}:${status.name}`),
-    lanes: () => lanes.map(lane => `${lane.id}:${lane.cards.length}`)
+    lanes: () => lanes.map(lane => `${lane.id}:${lane.cards.length}`),
+    /** The saved list as the server has it: "sequence:name" in the order of the list. */
+    saved: () => autoItems.map(item => `${item.seq}:${item.name}`)
 };

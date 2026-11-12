@@ -2,7 +2,7 @@
   "name": "mendix-dragdrop-widget",
   "widgetName": "DragDrop",
   "version": "1.0.0",
-  "description": "Drag and Drop: a Mendix pluggable widget that adds drag-and-drop reordering to lists that already exist (Gallery, List view, Data grid 2). Mouse, touch and keyboard.",
+  "description": "Auto Drag and Drop: a Mendix pluggable widget that makes the rows of a list you already have draggable (Gallery, List view, Data grid 2). No microflow needed. Mouse, touch and keyboard.",
   "copyright": "2026 HomeZero B.V.",
   "author": "HomeZero B.V.",
   "license": "Apache-2.0",

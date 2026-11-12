@@ -1,8 +1,8 @@
-# Drag and Drop
+# Auto Drag and Drop
 
-A Mendix pluggable widget (`homezero.dragdrop.DragDrop`, shown in Studio Pro as "Drag & drop") that adds
-drag-and-drop to a list that already exists. You place it in a row; it draws a six-dot grip there and makes that row
-draggable among the rows of its list. The list itself (a Gallery, a Data grid 2, a list view) keeps loading and
+A Mendix pluggable widget (`homezero.dragdrop.DragDrop`, shown in Studio Pro as "Auto Drag and Drop") that makes the
+rows of a list you already have draggable. You place it in a row; it draws a six-dot grip there and makes that row
+draggable among the rows of its list. The list itself (a Gallery, a Data grid 2, a List view) keeps loading and
 showing its own data, so it looks exactly as before.
 
 It works with mouse, touch and keyboard, in vertical lists, horizontal lists, wrapping grids, grouped lists and
@@ -17,34 +17,61 @@ boards with lanes. It has no dependencies besides Mendix itself.
 
 ![A card being dragged to an empty lane, next to a grouped list](docs/media/06-board-dragging.png)
 
-## Use it in a list
+## Three steps
 
-1. Put the widget in the row template, where the six dots should appear.
-2. Set **Sort value** to the row's sort attribute, e.g. `$currentObject/Sequence` (a Decimal).
-3. Set **On drop** to a microflow or nanoflow. It runs with the dragged row's object as context and gets these
-   variables:
+Your rows have a number that says in which order they go (an Integer or Decimal attribute, say `Sequence`), and the
+list is sorted by it.
 
-   | Variable | Meaning |
-   |---|---|
-   | `newSortValue` | A value between the new neighbours: the average of both, the row below − 1, the row above + 1, or 0 in an empty list |
-   | `newIndex` | 0-based position among the rows shown, without the dragged row |
-   | `afterKey`, `beforeKey` | Item keys of the new neighbours (empty at the start or end) |
-   | `toZoneKey`, `fromZoneKey` | Zone keys, when drop zones are used |
+1. Put the widget in the row: in the template of a Gallery or List view, or in a custom-content column of a
+   Data grid 2.
+2. **Sort attribute**: pick that attribute.
+3. **On drop** (Events tab): choose **Save changes**, with Close page set to No.
 
-4. In the flow: set the sort attribute to `newSortValue`, retrieve the siblings in order, renumber them 1..n in a
-   loop, commit, and refresh one object so the list reloads.
+That is all: no microflow. When a row is dropped, the widget gives the rows between the old and the new place each
+other's numbers, and On drop saves every row it changed. Drag the last of twenty rows to the top and twenty rows get
+a new number; swap two neighbours and two do. Rows outside that range are not touched, so it also works in a list
+with pages or with numbers that do not start at 1.
+
+Good to know:
+
+- **Write access.** The widget changes the sort attribute as the user, so the user's role needs write access to it.
+  For a user without it the rows cannot be dragged: the dots are greyed out, with a tooltip that says why. If your
+  users may not write the attribute but may reorder, use manual sequencing with a microflow (below).
+- **Rows with the same number, or none.** New rows often all start at 0. The first time such a list is reordered,
+  the rows that are shown are numbered 1, 2, 3 and so on. With pages, that is the rows of the page you are on.
+- **On drop is what saves.** Without it nothing is stored: the row slides back, and the browser's console says so.
+  Instead of Save changes you can pick a microflow or nanoflow that commits the row, for example to do something
+  more after each change.
+
+## Advanced settings
+
+Set **Show advanced settings** to Yes for everything below.
+
+### Your own drop logic (manual sequencing)
+
+Set **Sequencing** to Manual. The widget then changes nothing. On drop runs once, for the dragged row, with that
+row's object as context and these variables:
+
+| Variable | Meaning |
+|---|---|
+| `newSortValue` | A value between the new neighbours: the average of both, the row below − 1, the row above + 1, or 0 in an empty list |
+| `newIndex` | 0-based position among the rows shown, without the dragged row |
+| `afterKey`, `beforeKey` | Item keys of the new neighbours (empty at the start or end) |
+| `toZoneKey`, `fromZoneKey` | Zone keys, when drop zones are used |
+
+In the flow: set the sort attribute to `newSortValue`, retrieve the siblings in order, renumber them 1..n in a loop,
+commit, and refresh one object so the list reloads. A microflow that does not apply entity access can do this for
+users who may not write the attribute themselves.
 
 The widget shows the row at its new place at once and keeps that preview until the list reloads. When the list does
 not change (the flow refused the move), the row slides back.
 
-An Integer sort attribute cannot hold a value between two neighbours. Use `newIndex` instead: move the row to that
-position in the retrieved list and renumber.
-
-### Rows that move between lists
+### Rows that move between lists (drop zones)
 
 Add a second widget with **Role** = Drop zone to each lane or group, give it a **Zone key**, and give the rows an
-**Item key**. Rows and zones only meet when their **Group** is the same. Either side can handle the drop: the row's
-On drop gets `toZoneKey`; the zone's On drop in zone gets `draggedKey`.
+**Item key**. Rows and zones only meet when their **Group** is the same. A move to another list is always yours to
+store (the widget cannot know what makes a row belong to a lane), so the rows use manual sequencing. Either side can
+handle the drop: the row's On drop gets `toZoneKey`; the zone's On drop in zone gets `draggedKey`.
 
 A drop zone is one of two things (**Drop zone is**):
 
@@ -57,40 +84,48 @@ A drop zone is one of two things (**Drop zone is**):
 An empty list needs a drop zone around it. If the zone holds more than one list, give the target list the class
 `dragdrop-list`.
 
-## Properties
+## Settings
 
-| Role | Property | Purpose |
+| Tab | Setting | Purpose |
 |---|---|---|
-| Both | Group | Rows only drop among rows and zones of the same group |
-| Both | Disabled | An expression: the row cannot be dragged / the zone accepts no drops. A disabled row still makes room for others |
-| Handle | Drag by | Whole row (default) or six dots only |
-| Handle | Show six dots | Draw the grip where the widget sits (default on) |
-| Handle | Sort value, Item key | See above |
-| Handle | Row (CSS selector) | The element that moves, when it is not the list item the widget sits in |
-| Handle | Handle label | Screen reader text and tooltip; empty = a built-in Dutch, German or English text |
-| Drop zone | Zone key | Passed to the drop actions |
-| Drop zone | Drop zone is | "An element around this widget" shows **Element (CSS selector)**; "The content of this widget" shows **Content**. An empty selector is an error in Studio Pro |
-| Both | Animate list changes | Animate the list whenever it changes, not only after a drag (default on); see below |
-| Both | Duration | How long a row takes to move to another place, in milliseconds (default 200; 0 = no animation) |
-| Both | Animation flow | Ease in-out, Ease in, Ease out (default) or Linear |
-| Handle | On drop | Action with the row as context |
-| Drop zone | On drop in zone | Action with the zone as context |
+| General | Show advanced settings | No (default): only the settings marked "basic" below |
+| General | Sort attribute (basic) | The Integer, Long or Decimal attribute that holds the order |
+| General | Drag by (basic) | Whole row (default) or six dots only |
+| General | Show six dots (basic) | Draw the grip where the widget sits (default on) |
+| General | Role | Handle (default) or Drop zone |
+| General | Group | With drop zones: rows only drop in zones of the same group |
+| General | Disabled | An expression: the row cannot be dragged / the zone accepts no drops. A disabled row still makes room for others |
+| General | Sequencing | Automatic (default) or Manual, see above |
+| General | Item key | The row's name in the drop actions |
+| General | Row (CSS selector) | The element that moves, when it is not the list item the widget sits in |
+| General | Handle label | Screen reader text and tooltip; empty = a built-in Dutch, German or English text |
+| General | Zone key, Drop zone is, Element (CSS selector), Content | For the Drop zone role, see above |
+| Animation | Animate list changes | Animate the list whenever it changes, not only after a drag (default on) |
+| Animation | Duration | How long a row takes to move to another place, in milliseconds (default 200; 0 = no animation) |
+| Animation | Animation flow | Ease in-out, Ease in, Ease out (default) or Linear |
+| Events | On drop | Automatic: Save changes. Manual: your flow |
+| Events | On drop in zone | Drop zone: action with the zone as context |
+
+Switching Show advanced settings back to No: first set the advanced settings back to what they were (Role to Handle,
+Sequencing to Automatic, the others empty). Studio Pro reports a widget that holds a value in a setting it no longer
+shows.
 
 Behaviour worth knowing:
 
 - **Whole row**: buttons, links and inputs in the row keep working, and a drag does not click the row. On touch a
   press on the dots picks the row up at once; elsewhere it needs a short hold, so a swipe still scrolls.
-- **Keyboard**: focus the dots, Space or Enter picks up, arrow keys move, Space or Enter drops, Escape cancels.
+- **Keyboard**: focus the dots, Space or Enter picks up, the arrow keys move, Space or Enter drops, Escape cancels.
+  The arrows follow the list: Up and Down in a list that runs down, Left and Right in one that runs sideways, all
+  four in a wrapping grid (Up and Down by a whole line).
 - **Escape** during a mouse or touch drag puts the row back.
 - **Duration and Animation flow** also set the speed of the drag itself, so they stay in use when Animate list
   changes is off. The pair applies to everything that moves in the list: rows making room during a drag, the dropped
   row landing (a little quicker), rows sliding after a list change, a new row coming in (a little longer, after a
   short pause) and a deleted row fading away.
 - **Moves in quick succession** do not wait for the server. A row picked up while an earlier move in the list is
-  still on its way to the server is dragged on top of what the list shows. The drop actions then run one at a time,
-  each after the list reloaded for the one before, so every action gets the sort values the previous one left
-  behind. If one is refused, it and the moves made on top of it slide back. Only after a move to another list does
-  the next drag wait until that move is confirmed.
+  still being saved is dragged on top of what the list shows. The drops are then stored one at a time, each after
+  the one before it. If one is refused, it and the moves made on top of it slide back. Only after a move to another
+  list does the next drag wait until that move is confirmed.
 - **Animate list changes** does what an auto-animate wrapper around the list would do; do not use both, they would
   each move the rows. A row that is added fades in, a row that is deleted fades away where it was, and the rows in
   between slide to their new place. A list that is loaded anew (no row stayed: another page, another filter) just
@@ -103,9 +138,10 @@ The widget's CSS is structural. Colours come from custom properties your theme c
 `--dragdrop-handle-color`, `--dragdrop-handle-hover-color`, `--dragdrop-handle-hover-background`,
 `--dragdrop-focus-color`, `--dragdrop-lift-shadow`, `--dragdrop-zone-over-outline`.
 
-Hooks for app styles: `.dragdrop-handle`, `.dragdrop-ghost` (the copy that follows the pointer),
-`.dragdrop-leaving` (the copy of a deleted row while it fades away), `[data-dragdrop-row]`, `[data-dragdrop-zone]`,
-`[data-dragdrop-over]` (the zone under the pointer) and `html.dragdrop-active` (while dragging).
+Hooks for app styles: `.dragdrop-handle`, `.dragdrop-handle--locked` (the user may not reorder), `.dragdrop-ghost`
+(the copy that follows the pointer), `.dragdrop-leaving` (the copy of a deleted row while it fades away),
+`[data-dragdrop-row]`, `[data-dragdrop-zone]`, `[data-dragdrop-over]` (the zone under the pointer) and
+`html.dragdrop-active` (while dragging).
 
 ## Limits
 
@@ -114,13 +150,17 @@ Hooks for app styles: `.dragdrop-handle`, `.dragdrop-ghost` (the copy that follo
   label but no position while the row moves, and there is no click-only alternative to dragging (WCAG 2.5.7). Keep
   or add move buttons where you need that. Planned for a later version.
 - A row needs the six dots to be reachable by keyboard.
+- Automatic sequencing works within a list. Rows that move between drop zones need your own drop logic.
+- Automatic sequencing saves each changed row with its own request. That is fine for the lists people reorder by
+  hand; for moves across hundreds of rows, use manual sequencing with one microflow.
 - Rows without the widget in a list with the widget are not shifted during a drag.
 - Not built: dragging several rows at once, trees (dropping onto a row), dragging from a palette, and "nothing may be
   dropped above this row" (let the drop action refuse instead).
 - In a wrapping grid the gap animation assumes cells of equal size.
 - After a move to another list the next drag waits until that move is confirmed. Moves within a list do not wait.
-- Moves in a queue rely on the list reloading after each drop action. A flow that changes the order without
-  refreshing anything leaves the queue waiting until the move counts as refused (about 1.5 s after the action).
+- With manual sequencing, moves in a queue rely on the list reloading after each drop action. A flow that changes
+  the order without refreshing anything leaves the queue waiting until the move counts as refused (about 1.5 s
+  after the action).
 
 ## How it works
 
@@ -140,8 +180,12 @@ Hooks for app styles: `.dragdrop-handle`, `.dragdrop-ghost` (the copy that follo
 - A row can be shown away from its place in the layout for two reasons that add up: a preview (a drop the server
   has not confirmed) and a shift (a drag going on). A drag measures the rows where the previews show them, so it can
   start on top of a pending drop.
-- `src/DragDrop.editorConfig.ts` hides the settings that do not apply to the chosen role. A value in a hidden
-  property is error CE0463 in Studio Pro, so keep those rules and the XML in step.
+- Automatic sequencing (`src/engine/sequence.ts`): the values the places of the list have now go to the rows that
+  take those places. A widget cannot commit an object itself, so each row's widget sets its own attribute and runs
+  its own On drop. The list reloads after every save, in an order that is only right after the last one; until then
+  every row stays where it is shown.
+- `src/DragDrop.editorConfig.ts` hides the settings that do not apply to the chosen level and role. A value in a
+  hidden property is error CE0463 in Studio Pro, so keep those rules and the XML in step.
 
 ## Develop
 
@@ -170,7 +214,8 @@ node dev/serve.mjs     # http://localhost:4173/dev/harness.html
 ```
 
 The buttons above the status list and the data grid add and delete rows, "Load anew" replaces every row, and
-"Widget renders after its row" registers each new row a moment late. `window.harness.animations()` returns what the
+"Widget renders after its row" registers each new row a moment late. List 7 uses automatic sequencing: its fake
+server saves the rows one by one and reloads the list after each. `window.harness.animations()` returns what the
 engine set in motion since the last call (`enter:`, `leave:`, `slide:` with the row's text), which is how the list
 animations are checked without watching them. The toolbar's Duration and Animation flow apply to every list on the
 page.
@@ -178,8 +223,9 @@ page.
 `npm run drive` checks the harness the way a person in a hurry would use it: a real (headless) Chrome with a real
 mouse and touch screen makes chains of moves 0 to 600 ms apart against a server of 350 and 900 ms, in every kind of
 list, picks the same row up again right after dropping it, and reports where a list did not end up as those moves
-describe; then it goes through list changes, timing, refused moves, cancel, keyboard, clicks, moves between lists
-and touch. It needs the harness server running, Chrome, and Playwright, which is not a dependency of this project:
+describe; then it goes through list changes, timing, refused moves, cancel, keyboard, clicks, moves between lists,
+automatic sequencing and touch. It needs the harness server running, Chrome, and Playwright, which is not a
+dependency of this project:
 
 ```bash
 NODE_PATH="<a folder with playwright>/node_modules" npm run drive            # everything, about 8 minutes

@@ -38,6 +38,12 @@ export interface ItemOptions {
     easing: string;
     /** Runs the row's own drop action. Returns false when there is none or it cannot run now. */
     drop: ((info: DropInfo) => boolean) | null;
+    /**
+     * Automatic sequencing: gives this row a new sort value and has it saved. `done` is called once when the save
+     * has finished (or will not happen). Returns false when the row cannot be changed or saved. Null when the
+     * list's owner does the numbering itself, in its drop action.
+     */
+    assign: ((value: string, index: number, done: () => void) => boolean) | null;
 }
 
 export interface ZoneOptions {

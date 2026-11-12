@@ -3,12 +3,20 @@
         supportedPlatform="Web"
         xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
-    <name>Drag &amp; drop</name>
-    <description>Adds drag-and-drop to a list that already exists. Place it in a row: it draws a six-dot grip and makes that row draggable. The list keeps loading and showing its own data.</description>
+    <name>Auto Drag and Drop</name>
+    <description>Makes the rows of a list you already have draggable. Place it in a row, pick the sort attribute, and set On drop (Events tab) to Save changes.</description>
     <icon/>
     <properties>
         <propertyGroup caption="General">
-            <propertyGroup caption="Role">
+            <propertyGroup caption="Settings">
+                <property key="advanced" type="enumeration" defaultValue="no">
+                    <caption>Show advanced settings</caption>
+                    <description>No: place the widget in a row of a Gallery, List view or Data grid 2, pick the sort attribute below, and set On drop (Events tab) to 'Save changes'. That is all. Yes: also drop zones (rows that move between lists), your own drop logic, and more settings for the row.</description>
+                    <enumerationValues>
+                        <enumerationValue key="no">No</enumerationValue>
+                        <enumerationValue key="yes">Yes</enumerationValue>
+                    </enumerationValues>
+                </property>
                 <property key="role" type="enumeration" defaultValue="handle">
                     <caption>Role</caption>
                     <description>Handle: place it in a row (a gallery item, list view item or data grid row) to make that row draggable; it draws the six dots there. Drop zone: only needed when rows move between lists (lanes, groups) or into an empty list.</description>
@@ -19,7 +27,7 @@
                 </property>
                 <property key="group" type="string" required="true" defaultValue="default">
                     <caption>Group</caption>
-                    <description>Rows can only be dropped among rows and in drop zones with the same group name. Give nested lists (for example packages and the lines inside them) different names.</description>
+                    <description>Only matters with drop zones: rows can only be dropped in drop zones with the same group name. Give nested lists (for example packages and the lines inside them) different names.</description>
                 </property>
                 <property key="disabled" type="expression" required="false">
                     <caption>Disabled</caption>
@@ -28,6 +36,15 @@
                 </property>
             </propertyGroup>
             <propertyGroup caption="Row">
+                <property key="sortAttribute" type="attribute" required="false">
+                    <caption>Sort attribute</caption>
+                    <description>The attribute that holds the order of the rows, e.g. Sequence. Sort the list by it. The widget gives the rows that change place each other's numbers; the user needs write access to this attribute.</description>
+                    <attributeTypes>
+                        <attributeType name="Integer"/>
+                        <attributeType name="Long"/>
+                        <attributeType name="Decimal"/>
+                    </attributeTypes>
+                </property>
                 <property key="dragBy" type="enumeration" defaultValue="row">
                     <caption>Drag by</caption>
                     <description>Whole row: the row can be picked up anywhere; buttons, links and inputs in it keep working. On touch a short press picks it up, so a swipe still scrolls. Six dots only: dragging starts on the dots only, so text in the row stays selectable.</description>
@@ -38,21 +55,24 @@
                 </property>
                 <property key="showHandle" type="boolean" defaultValue="true">
                     <caption>Show six dots</caption>
-                    <description>Draw the six-dot grip where this widget is placed, as a sign that the row can be dragged. On touch a press on the dots picks the row up at once.</description>
+                    <description>Draw the six-dot grip where this widget is placed, as a sign that the row can be dragged. On touch a press on the dots picks the row up at once. The dots are also what a keyboard user focuses.</description>
                 </property>
-                <property key="sortValue" type="expression" required="false">
-                    <caption>Sort value</caption>
-                    <description>Optional. Current sort value of this row (e.g. $currentObject/Sequence). When set, On drop receives a new sort value between the neighbours at the drop position (newSortValue).</description>
-                    <returnType type="Decimal"/>
+                <property key="sequencing" type="enumeration" defaultValue="automatic">
+                    <caption>Sequencing</caption>
+                    <description>Automatic: the widget changes the sort attribute of the rows that change place, then runs On drop for each of them; set On drop to 'Save changes'. Manual: the widget changes nothing; On drop runs once, for the dragged row, and gets the new position (newSortValue, newIndex) to store the order yourself. Rows that move between drop zones are always manual.</description>
+                    <enumerationValues>
+                        <enumerationValue key="automatic">Automatic</enumerationValue>
+                        <enumerationValue key="manual">Manual (my own On drop logic)</enumerationValue>
+                    </enumerationValues>
                 </property>
                 <property key="itemKey" type="expression" required="false">
                     <caption>Item key</caption>
-                    <description>Optional. Unique key of this row (e.g. toString($currentObject/StatusID)). Needed when rows move between drop zones, and passed to On drop as the key of the neighbours.</description>
+                    <description>Optional. Unique key of this row (e.g. toString($currentObject/StatusID)). Passed to the drop actions: the dragged row's key to a drop zone's action, and the keys of the new neighbours to both.</description>
                     <returnType type="String"/>
                 </property>
                 <property key="rowSelector" type="string" required="false">
                     <caption>Row (CSS selector)</caption>
-                    <description>Optional. The element that moves: the closest ancestor matching this selector. Leave empty for the gallery item, list view item or data grid row this widget sits in.</description>
+                    <description>Optional. The element that moves: the closest element around this widget that matches this selector. Leave empty for the gallery item, list view item or data grid row this widget sits in.</description>
                 </property>
                 <property key="handleLabel" type="textTemplate" required="false">
                     <caption>Handle label</caption>
@@ -62,7 +82,7 @@
             <propertyGroup caption="Drop zone">
                 <property key="zoneKey" type="expression" required="false">
                     <caption>Zone key</caption>
-                    <description>Key of this drop zone (e.g. toString($currentObject/StatusID)), passed to the On drop actions as the zone a row came from or went to.</description>
+                    <description>Key of this drop zone (e.g. toString($currentObject/StatusID)), passed to the drop actions as the zone a row came from or went to.</description>
                     <returnType type="String"/>
                 </property>
                 <property key="zoneTarget" type="enumeration" defaultValue="selector">
@@ -75,13 +95,15 @@
                 </property>
                 <property key="targetSelector" type="string" required="false">
                     <caption>Element (CSS selector)</caption>
-                    <description>The drop zone is the closest element around this widget that matches this selector, e.g. .kbn-lane.</description>
+                    <description>The drop zone is the closest element around this widget that matches this selector, e.g. .board-lane. The widget must sit inside that element.</description>
                 </property>
                 <property key="content" type="widgets" required="false">
                     <caption>Content</caption>
                     <description>The list that forms the drop zone.</description>
                 </property>
             </propertyGroup>
+        </propertyGroup>
+        <propertyGroup caption="Animation">
             <propertyGroup caption="Animation">
                 <property key="animateChanges" type="boolean" defaultValue="true">
                     <caption>Animate list changes</caption>
@@ -89,11 +111,11 @@
                 </property>
                 <property key="duration" type="integer" defaultValue="200">
                     <caption>Duration</caption>
-                    <description>How long a row takes to move to another place, in milliseconds: when it makes room during a drag, settles after a drop, or the list changes. A new row takes a little longer to come in. 0 = no animation. (AutoAnimate's default is 250.)</description>
+                    <description>How long a row takes to move to another place, in milliseconds: when it makes room during a drag, settles after a drop, or the list changes. A new row takes a little longer to come in. 0 = no animation.</description>
                 </property>
                 <property key="animationFlow" type="enumeration" defaultValue="easeOut">
                     <caption>Animation flow</caption>
-                    <description>How rows speed up and slow down while they move. (AutoAnimate's default is Ease in-out.)</description>
+                    <description>How rows speed up and slow down while they move.</description>
                     <enumerationValues>
                         <enumerationValue key="easeInOut">Ease in-out (slow start and slow end)</enumerationValue>
                         <enumerationValue key="easeIn">Ease in (slow start)</enumerationValue>
@@ -107,10 +129,10 @@
             <propertyGroup caption="Row">
                 <property key="onDrop" type="action" required="false">
                     <caption>On drop</caption>
-                    <description>Handle only. Runs when this row is dropped at a new place, with this row's object as context.</description>
+                    <description>With automatic sequencing: choose 'Save changes' (Close page: No). It runs for every row whose number changed, so the new order is stored. With manual sequencing: runs once for the dragged row, with the variables below.</description>
                     <actionVariables>
                         <actionVariable key="newIndex" type="Integer" caption="0-based position among the rows shown in the target list, without the dragged row"/>
-                        <actionVariable key="newSortValue" type="Decimal" caption="Sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 in an empty list (needs Sort value on the rows)"/>
+                        <actionVariable key="newSortValue" type="Decimal" caption="Manual sequencing: sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 in an empty list (needs Sort attribute on the rows)"/>
                         <actionVariable key="toZoneKey" type="String" caption="Zone key of the drop zone the row was dropped in (empty without drop zones)"/>
                         <actionVariable key="fromZoneKey" type="String" caption="Zone key of the drop zone the row came from (empty without drop zones)"/>
                         <actionVariable key="afterKey" type="String" caption="Item key of the row it was dropped after (empty = at the start)"/>
@@ -128,7 +150,7 @@
                         <actionVariable key="afterKey" type="String" caption="Item key of the row it was dropped after (empty = at the start)"/>
                         <actionVariable key="beforeKey" type="String" caption="Item key of the row it was dropped before (empty = at the end)"/>
                         <actionVariable key="newIndex" type="Integer" caption="0-based position in this zone among the rows shown, without the dragged row"/>
-                        <actionVariable key="newSortValue" type="Decimal" caption="Sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 when the zone is empty (needs Sort value on the rows)"/>
+                        <actionVariable key="newSortValue" type="Decimal" caption="Sort value between the neighbours: average of both, row below - 1, row above + 1, or 0 when the zone is empty (needs Sort attribute on the rows)"/>
                     </actionVariables>
                 </property>
             </propertyGroup>
