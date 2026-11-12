@@ -10,7 +10,7 @@ above it. Keep this file in step with the listing when a new version is publishe
 | Component Name | Auto Drag and Drop |
 | Component Type | Widget |
 | Visibility | Public |
-| Component Source | GitHub Link: the release `v1.0.0` of https://github.com/HomeZeroTech/mendix-dragdrop-widget |
+| Component Source | GitHub Link: the release `v1.0.0` of https://github.com/HomeZeroTech/mendix-autodragdrop-widget |
 | Studio Pro Version | 11.12.6 |
 | Compatible with Mendix React Client | Yes |
 | Release Version | 1.0.0 |
@@ -146,6 +146,6 @@ In `docs/media/`, taken from the demo app and from Studio Pro:
 
 **Resources**
 
-- GitHub: https://github.com/HomeZeroTech/mendix-dragdrop-widget
-- Issues: https://github.com/HomeZeroTech/mendix-dragdrop-widget/issues
+- GitHub: https://github.com/HomeZeroTech/mendix-autodragdrop-widget
+- Issues: https://github.com/HomeZeroTech/mendix-autodragdrop-widget/issues
 - Demo app: https://autodraganddrop-sandbox.mxapps.io/

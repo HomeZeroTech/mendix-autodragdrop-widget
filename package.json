@@ -1,5 +1,5 @@
 {
-  "name": "mendix-dragdrop-widget",
+  "name": "mendix-autodragdrop-widget",
   "widgetName": "DragDrop",
   "version": "1.0.0",
   "description": "Auto Drag and Drop: a Mendix pluggable widget that makes the rows of a list you already have draggable (Gallery, List view, Data grid 2). No microflow needed. Mouse, touch and keyboard.",
@@ -8,10 +8,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/HomeZeroTech/mendix-dragdrop-widget.git"
+    "url": "https://github.com/HomeZeroTech/mendix-autodragdrop-widget.git"
   },
   "bugs": {
-    "url": "https://github.com/HomeZeroTech/mendix-dragdrop-widget/issues"
+    "url": "https://github.com/HomeZeroTech/mendix-autodragdrop-widget/issues"
   },
   "engines": {
     "node": ">=20"
