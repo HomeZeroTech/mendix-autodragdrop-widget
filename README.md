@@ -19,8 +19,8 @@ boards with lanes. It has no dependencies besides Mendix itself.
 
 ## Three steps
 
-Your rows have a number that says in which order they go (an Integer or Decimal attribute, say `Sequence`), and the
-list is sorted by it.
+Your rows have a number that says in which order they go (an Integer, Long or Decimal attribute, say `Sequence`),
+and the list is sorted by it.
 
 1. Put the widget in the row: in the template of a Gallery or List view, or in a custom-content column of a
    Data grid 2.
@@ -90,7 +90,7 @@ An empty list needs a drop zone around it. If the zone holds more than one list,
 
 | Tab | Setting | Purpose |
 |---|---|---|
-| General | Show advanced settings | No (default): only the settings marked "basic" below |
+| General | Show advanced settings | No (default): the General tab shows only the settings marked "basic" below |
 | General | Sort attribute (basic) | The Integer, Long or Decimal attribute that holds the order |
 | General | Drag by (basic) | Whole row (default) or six dots only |
 | General | Show six dots (basic) | Draw the grip where the widget sits (default on) |
@@ -109,8 +109,8 @@ An empty list needs a drop zone around it. If the zone holds more than one list,
 | Animation | Animation flow | Ease in-out, Ease in, Ease out (default) or Linear |
 
 Switching Show advanced settings back to No: first set the advanced settings back to what they were (Role to Handle,
-Sequencing to Automatic, the others empty). Studio Pro reports a widget that holds a value in a setting it no longer
-shows.
+Sequencing to Automatic, Group to `default`, the others empty). Studio Pro reports a widget that holds a value in a
+setting it no longer shows.
 
 Behaviour worth knowing:
 
